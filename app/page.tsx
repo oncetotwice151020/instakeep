@@ -10,6 +10,11 @@ type Tab = "all" | "image" | "video" | "carousel";
 const historyKey = "instakeep-history-v1";
 const assetPath = (path: string) => `${import.meta.env.BASE_URL || "/"}${path.replace(/^\/+/, "")}`;
 const apiPath = (path: string) => `${import.meta.env.VITE_API_ORIGIN || ""}${path}`;
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && ["AbortError", "TimeoutError"].includes(error.name)) return "请求超时，请检查网络连接后重试。";
+  if (error instanceof TypeError || (error instanceof Error && /Failed to fetch|Load failed|NetworkError/i.test(error.message))) return "无法连接下载服务，请检查当前网络能否访问服务地址，然后重试。";
+  return error instanceof Error ? error.message : fallback;
+}
 const tabs = [{ id: "all", label: "全部内容", icon: Layers3 }, { id: "image", label: "图片", icon: ImageIcon }, { id: "video", label: "视频 / Reels", icon: Film }, { id: "carousel", label: "轮播图集", icon: Layers3 }] as const;
 const faqs = [
   ["可以下载哪些内容？", "支持公开可访问的 Instagram 帖子、图片、视频、Reels 和轮播图集。请仅保存你自己发布、已获得作者授权，或其他依法有权下载的内容。"],
@@ -60,7 +65,7 @@ export default function Home() {
       const next: Result = { ...data, items: data.items.map((item: { type: "image" | "video"; width?: number; height?: number }, index: number) => ({ ...item, preview: apiPath(`/api/media?post=${encodeURIComponent(data.url)}&index=${index}&preview=1`), download: apiPath(`/api/media?post=${encodeURIComponent(data.url)}&index=${index}`), filename: `instagram_${data.shortcode}_${index + 1}.${item.type === "video" ? "mp4" : "jpg"}` })) };
       setResult(next); setUrl(data.url);
       saveHistory([{ url: data.url, time: Date.now(), count: data.items.length }, ...history.filter(item => item.url !== data.url)].slice(0, 12));
-    } catch (err) { setError(err instanceof Error && err.name === "AbortError" ? "请求超时。请检查网络，或稍后重试。" : err instanceof Error ? err.message : "网络连接失败，请稍后重试。"); }
+    } catch (err) { setError(errorMessage(err, "网络连接失败，请稍后重试。")); }
     finally { clearTimeout(timer); setLoading(false); }
   }
 
@@ -94,7 +99,7 @@ export default function Home() {
       const items = index === undefined ? activeItems : [{ ...result.items[index], index }];
       for (const item of items) await saveFile(item, item.index);
       setNotice(items.length > 1 ? "已向浏览器提交下载。如被拦截，请允许此网站下载多个文件。" : "已向浏览器提交下载，请查看下载列表。");
-    } catch (err) { setError(err instanceof Error ? err.message : "下载失败，请稍后重试。"); }
+    } catch (err) { setError(errorMessage(err, "下载失败，请稍后重试。")); }
     finally { setBusy(null); }
   }
 
