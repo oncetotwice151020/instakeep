@@ -2,6 +2,24 @@
 
 中文 Instagram 图片、视频、Reels 和轮播下载网站。使用 React + TypeScript + Vinext，服务端运行在 Cloudflare Workers；也可在本机运行。
 
+## 在线使用
+
+- 网页：[https://oncetotwice151020.github.io/instakeep/](https://oncetotwice151020.github.io/instakeep/)
+- 源码：[oncetotwice151020/instakeep](https://github.com/oncetotwice151020/instakeep)
+
+GitHub Pages 托管静态前端，解析和文件转发由独立的 Cloudflare Workers / Sites 后端处理。网页不需要 GitHub 或 Instagram 登录。Instagram 对服务器的访问限制仍可能导致部分内容无法解析。
+
+推送到 `main` 会触发 `.github/workflows/pages.yml`，自动构建并更新 GitHub Pages。后端修改仍需另行发布后端服务。
+
+本地构建 GitHub Pages 版本：
+
+```powershell
+npm run build:pages
+npm run preview:pages
+```
+
+前端构建输出在 `out/`，默认路径为 `/instakeep/`。修改仓库名称时，Actions 会自动使用新仓库路径。`pages/deployment.json` 指定后端地址和允许访问后端的前端域名；更换账号或自定义域名时应同步更新并重新部署后端。
+
 ## 本地启动
 
 需要 Node.js 22.13 或更新版本。第一次运行：
@@ -39,7 +57,7 @@ npm start
 - 应用不把媒体写入文件存储；解析结果在服务器内存短暂缓存 3 分钟。没有应用数据库。Hosting 提供方可能另有运行日志。
 - 下载不代表获得转载、改编或商用授权。公开可见也不等于可自由使用。
 
-安全措施包括严格的帖子域名及路径校验、CDN 域名白名单、每次重定向复验、响应体和媒体体积限制、流式大小限制、跨站 POST 校验、短期内存缓存和每实例频率限制。频率限制是每 Worker 实例的保护，并非跨实例的全局配额。新建的 Sites 部署默认仅所有者可访问。
+安全措施包括严格的帖子域名及路径校验、CDN 域名白名单、每次重定向复验、响应体和媒体体积限制、流式大小限制、前端来源白名单、短期内存缓存和每实例频率限制。频率限制是每 Worker 实例的保护，并非跨实例的全局配额。当前前端和后端为公开访问，不要求登录。
 
 ## 检查
 
