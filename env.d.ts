@@ -1,3 +1,4 @@
 interface ImportMetaEnv {
-  readonly VITE_API_ORIGIN?: string;
+  readonly VITE_STATIC_ONLY?: string;
+  readonly VITE_PRIVATE_WORKSPACE_URL?: string;
 }

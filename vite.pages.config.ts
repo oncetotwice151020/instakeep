@@ -1,12 +1,15 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import deployment from "./pages/deployment.json";
+import deployment from "./github-pages/deployment.json";
 
 export default defineConfig({
-  root: "pages",
+  root: "github-pages",
   base: process.env.GITHUB_PAGES_BASE || "/instakeep/",
   publicDir: "../public",
   plugins: [react()],
-  define: { "import.meta.env.VITE_API_ORIGIN": JSON.stringify(process.env.VITE_API_ORIGIN || deployment.apiOrigin) },
+  define: {
+    "import.meta.env.VITE_STATIC_ONLY": JSON.stringify("true"),
+    "import.meta.env.VITE_PRIVATE_WORKSPACE_URL": JSON.stringify(deployment.privateWorkspaceUrl),
+  },
   build: { outDir: "../out", emptyOutDir: true },
 });

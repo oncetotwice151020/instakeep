@@ -1,11 +1,7 @@
 import { apiError, DownloadError, isMediaUrl, rateLimit, resolvePost } from "@/lib/instagram";
-import { checkOrigin, preflight, withCors } from "@/lib/cors";
-
-export const OPTIONS = preflight;
 
 export async function GET(request: Request) {
   try {
-    checkOrigin(request);
     rateLimit(request, 90);
     const params = new URL(request.url).searchParams;
     const indexText = params.get("index");
@@ -38,6 +34,6 @@ export async function GET(request: Request) {
     for (const name of ["content-length", "content-range", "accept-ranges"]) { const value = upstream.headers.get(name); if (value) headers.set(name, value); }
     let transferred = 0;
     const body = upstream.body.pipeThrough(new TransformStream<Uint8Array, Uint8Array>({ transform(chunk, controller) { transferred += chunk.byteLength; if (transferred > limit) { controller.error(new Error("Media exceeds the transfer limit")); return; } controller.enqueue(chunk); } }));
-    return withCors(request, new Response(body, { status: upstream.status, headers }));
-  } catch (error) { return withCors(request, apiError(error)); }
+    return new Response(body, { status: upstream.status, headers });
+  } catch (error) { return apiError(error); }
 }
