@@ -7,7 +7,7 @@
 - 网页：[https://oncetotwice151020.github.io/instakeep/](https://oncetotwice151020.github.io/instakeep/)
 - 源码：[oncetotwice151020/instakeep](https://github.com/oncetotwice151020/instakeep)
 
-GitHub Pages 只发布静态展示版：可以浏览界面并下载本站原创示例文件，不会调用私人解析接口。点击「私人工作台」会打开仅所有者可访问的完整网站；需要先完成 ChatGPT 登录和访问检查。真实 Instagram 解析与文件下载后端保持私有。
+GitHub Pages 托管网页，公开的 Sites / Cloudflare Workers 后端负责真实 Instagram 链接解析、媒体预览和文件下载。访客无需 GitHub、ChatGPT 或 Instagram 登录。Instagram 对云服务器的访问限制仍可能导致部分内容无法解析。
 
 推送到 `main` 会触发 `.github/workflows/pages.yml`，自动构建并更新 GitHub Pages。后端修改仍需另行发布后端服务。
 
@@ -18,7 +18,7 @@ npm run build:pages
 npm run preview:pages
 ```
 
-前端构建输出在 `out/`，默认路径为 `/instakeep/`。修改仓库名称时，Actions 会自动使用新仓库路径。`github-pages/deployment.json` 指定私人工作台链接。公开页面不会直接向该后端发送解析、下载或预览请求。
+前端构建输出在 `out/`，默认路径为 `/instakeep/`。修改仓库名称时，Actions 会自动使用新仓库路径。`github-pages/deployment.json` 指定公开后端地址和允许跨站访问的前端域名。更换域名时应同步更新该配置并重新部署后端。
 
 ## 本地启动
 
@@ -57,7 +57,7 @@ npm start
 - 应用不把媒体写入文件存储；解析结果在服务器内存短暂缓存 3 分钟。没有应用数据库。Hosting 提供方可能另有运行日志。
 - 下载不代表获得转载、改编或商用授权。公开可见也不等于可自由使用。
 
-安全措施包括严格的帖子域名及路径校验、CDN 域名白名单、每次重定向复验、响应体和媒体体积限制、流式大小限制、跨站 POST 校验、短期内存缓存和每实例频率限制。频率限制是每 Worker 实例的保护，并非跨实例的全局配额。GitHub Pages 静态页面公开，完整解析与下载后端保持仅所有者可访问。
+安全措施包括严格的帖子域名及路径校验、CDN 域名白名单、每次重定向复验、响应体和媒体体积限制、流式大小限制、前端来源白名单与 CORS 校验、短期内存缓存和每实例频率限制。频率限制是每 Worker 实例的保护，并非跨实例的全局配额。网页和解析下载后端均为公开访问。
 
 ## 检查
 

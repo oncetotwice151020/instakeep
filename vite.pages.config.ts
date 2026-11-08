@@ -8,8 +8,7 @@ export default defineConfig({
   publicDir: "../public",
   plugins: [react()],
   define: {
-    "import.meta.env.VITE_STATIC_ONLY": JSON.stringify("true"),
-    "import.meta.env.VITE_PRIVATE_WORKSPACE_URL": JSON.stringify(deployment.privateWorkspaceUrl),
+    "import.meta.env.VITE_API_ORIGIN": JSON.stringify(deployment.apiOrigin),
   },
   build: { outDir: "../out", emptyOutDir: true },
 });

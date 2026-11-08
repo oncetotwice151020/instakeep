@@ -9,8 +9,7 @@ type HistoryItem = { url: string; time: number; count: number };
 type Tab = "all" | "image" | "video" | "carousel";
 const historyKey = "instakeep-history-v1";
 const assetPath = (path: string) => `${import.meta.env.BASE_URL || "/"}${path.replace(/^\/+/, "")}`;
-const staticOnly = import.meta.env.VITE_STATIC_ONLY === "true";
-const privateWorkspaceUrl = import.meta.env.VITE_PRIVATE_WORKSPACE_URL || "https://instakeep-studio-7q8m.shininghazel2.chatgpt.site";
+const apiPath = (path: string) => `${import.meta.env.VITE_API_ORIGIN || ""}${path}`;
 const tabs = [{ id: "all", label: "全部内容", icon: Layers3 }, { id: "image", label: "图片", icon: ImageIcon }, { id: "video", label: "视频 / Reels", icon: Film }, { id: "carousel", label: "轮播图集", icon: Layers3 }] as const;
 const faqs = [
   ["可以下载哪些内容？", "支持公开可访问的 Instagram 帖子、图片、视频、Reels 和轮播图集。请仅保存你自己发布、已获得作者授权，或其他依法有权下载的内容。"],
@@ -47,7 +46,6 @@ export default function Home() {
 
   async function resolve(target = url) {
     if (loading || busy !== null) return;
-    if (staticOnly) { window.location.assign(privateWorkspaceUrl); return; }
     setError("");
     if (!target.trim()) { setError("请先粘贴一个 Instagram 帖子或 Reels 链接。"); inputRef.current?.focus(); return; }
     setLoading(true); setResult(null); setDownloaded([]);
@@ -55,10 +53,11 @@ export default function Home() {
     const controller = new AbortController(); abortRef.current = controller;
     const timer = setTimeout(() => controller.abort(), 40000);
     try {
-      const response = await fetch("/api/resolve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: target.trim() }), signal: controller.signal });
+      const response = await fetch(apiPath("/api/resolve"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: target.trim() }), signal: controller.signal });
+      if (!response.headers.get("content-type")?.includes("application/json")) throw new Error("解析服务暂时无法访问，请稍后重试。");
       const data = await response.json() as Omit<Result, "items"> & { error?: string; items: { type: "image" | "video"; width?: number; height?: number }[] };
       if (!response.ok) throw new Error(data.error || "暂时无法解析，请稍后再试。");
-      const next: Result = { ...data, items: data.items.map((item: { type: "image" | "video"; width?: number; height?: number }, index: number) => ({ ...item, preview: `/api/media?post=${encodeURIComponent(data.url)}&index=${index}&preview=1`, download: `/api/media?post=${encodeURIComponent(data.url)}&index=${index}`, filename: `instagram_${data.shortcode}_${index + 1}.${item.type === "video" ? "mp4" : "jpg"}` })) };
+      const next: Result = { ...data, items: data.items.map((item: { type: "image" | "video"; width?: number; height?: number }, index: number) => ({ ...item, preview: apiPath(`/api/media?post=${encodeURIComponent(data.url)}&index=${index}&preview=1`), download: apiPath(`/api/media?post=${encodeURIComponent(data.url)}&index=${index}`), filename: `instagram_${data.shortcode}_${index + 1}.${item.type === "video" ? "mp4" : "jpg"}` })) };
       setResult(next); setUrl(data.url);
       saveHistory([{ url: data.url, time: Date.now(), count: data.items.length }, ...history.filter(item => item.url !== data.url)].slice(0, 12));
     } catch (err) { setError(err instanceof Error && err.name === "AbortError" ? "请求超时。请检查网络，或稍后重试。" : err instanceof Error ? err.message : "网络连接失败，请稍后重试。"); }
@@ -106,8 +105,8 @@ export default function Home() {
         <section className="hero" aria-labelledby="hero-title"><div className="eyebrow"><span className="live-dot" />YOUR MOMENTS, WELL KEPT</div><h1 id="hero-title">喜欢的瞬间，<span>值得好好保存<svg viewBox="0 0 390 15" aria-hidden="true"><path d="M4 10 Q170 -2 386 7" /></svg></span></h1><p className="hero-copy">一个链接，轻松保存 Instagram 图片、视频与 Reels。<br className="mobile-break" />让创作灵感，随时在手边。</p><div className="hero-perks"><span><Check size={14} />无需 Instagram 登录</span><span><Check size={14} />保留可用清晰度</span><span><Check size={14} />不添加水印</span></div></section>
         <section className="workspace" id="workspace" aria-label="Instagram 下载工具">
           <div className="tool-top"><div className="tool-tabs" role="tablist" aria-label="媒体类型">{tabs.map(({ id, label, icon: Icon }) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? "tool-tab selected" : "tool-tab"} onClick={() => setTab(id)}><Icon size={17} /><span>{label}</span></button>)}</div><span className="tool-badge"><span />在线工具</span></div>
-          <div className="tool-body">{staticOnly && <div className="static-notice"><LockKeyhole size={16} /><span>公开静态展示版 · 真实解析与下载服务保持私有。</span><a href={privateWorkspaceUrl} target="_blank" rel="noreferrer">私人工作台<ExternalLink size={12} /></a></div>}<div className="input-heading"><label htmlFor="post-url">粘贴你的 Instagram 链接</label><span>支持帖子、Reels 和图集</span></div>
-            <form onSubmit={event => { event.preventDefault(); void resolve(); }}><div className={`url-input-wrap${error ? " has-error" : ""}`}><Link2 size={22} className="input-icon" /><input ref={inputRef} id="post-url" aria-describedby={error ? "tool-error" : "url-hint"} type="text" inputMode="url" autoComplete="off" spellCheck={false} maxLength={1000} value={url} onChange={event => { setUrl(event.target.value); setError(""); }} placeholder="https://www.instagram.com/p/..." disabled={loading || busy !== null} /><button className="paste-button" type="button" aria-label="粘贴链接" onClick={paste} disabled={loading || busy !== null}><Clipboard size={15} /><span>粘贴</span></button><button className="resolve-button" type="submit" disabled={loading || busy !== null}>{loading ? <><LoaderCircle size={18} className="spin" />解析中</> : <>{staticOnly ? "打开私人工作台" : "解析链接"}<ArrowRight size={18} /></>}</button></div><div className="input-actions"><button className="demo-button" type="button" onClick={showDemo} disabled={loading || busy !== null}><Play size={12} fill="currentColor" />体验示例<ArrowRight size={13} /></button></div></form>
+          <div className="tool-body"><div className="input-heading"><label htmlFor="post-url">粘贴你的 Instagram 链接</label><span>支持帖子、Reels 和图集</span></div>
+            <form onSubmit={event => { event.preventDefault(); void resolve(); }}><div className={`url-input-wrap${error ? " has-error" : ""}`}><Link2 size={22} className="input-icon" /><input ref={inputRef} id="post-url" aria-describedby={error ? "tool-error" : "url-hint"} type="text" inputMode="url" autoComplete="off" spellCheck={false} maxLength={1000} value={url} onChange={event => { setUrl(event.target.value); setError(""); }} placeholder="https://www.instagram.com/p/..." disabled={loading || busy !== null} /><button className="paste-button" type="button" aria-label="粘贴链接" onClick={paste} disabled={loading || busy !== null}><Clipboard size={15} /><span>粘贴</span></button><button className="resolve-button" type="submit" disabled={loading || busy !== null}>{loading ? <><LoaderCircle size={18} className="spin" />解析中</> : <>解析链接<ArrowRight size={18} /></>}</button></div><div className="input-actions"><button className="demo-button" type="button" onClick={showDemo} disabled={loading || busy !== null}><Play size={12} fill="currentColor" />体验示例<ArrowRight size={13} /></button></div></form>
             <p className="sr-only" id="url-hint">支持 instagram.com 的 p、reel、reels、tv 帖子链接。</p>
             {error && <div className="error-box" id="tool-error" role="alert"><CircleHelp size={18} /><span>{error}</span></div>}
             {loading && <div className="loading-panel" role="status"><span className="loading-art"><Link2 size={25} /><LoaderCircle size={45} className="spin" /></span><strong>正在读取公开内容</strong><p>正在检查链接并寻找可下载的媒体，请稍候…</p><div className="loading-track"><span /></div></div>}
