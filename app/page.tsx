@@ -20,7 +20,6 @@ const faqs = [
 export default function Home() {
   const [tab, setTab] = useState<Tab>("all");
   const [url, setUrl] = useState("");
-  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
@@ -47,13 +46,12 @@ export default function Home() {
     if (loading || busy !== null) return;
     setError("");
     if (!target.trim()) { setError("请先粘贴一个 Instagram 帖子或 Reels 链接。"); inputRef.current?.focus(); return; }
-    if (!consent) { setError("请先确认你有权保存这份内容。"); return; }
     setLoading(true); setResult(null); setDownloaded([]);
     abortRef.current?.abort();
     const controller = new AbortController(); abortRef.current = controller;
     const timer = setTimeout(() => controller.abort(), 40000);
     try {
-      const response = await fetch("/api/resolve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: target.trim(), authorized: true }), signal: controller.signal });
+      const response = await fetch("/api/resolve", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: target.trim() }), signal: controller.signal });
       const data = await response.json() as Omit<Result, "items"> & { error?: string; items: { type: "image" | "video"; width?: number; height?: number }[] };
       if (!response.ok) throw new Error(data.error || "暂时无法解析，请稍后再试。");
       const next: Result = { ...data, items: data.items.map((item: { type: "image" | "video"; width?: number; height?: number }, index: number) => ({ ...item, preview: `/api/media?post=${encodeURIComponent(data.url)}&index=${index}&preview=1`, download: `/api/media?post=${encodeURIComponent(data.url)}&index=${index}`, filename: `instagram_${data.shortcode}_${index + 1}.${item.type === "video" ? "mp4" : "jpg"}` })) };
@@ -88,7 +86,6 @@ export default function Home() {
 
   async function download(index?: number) {
     if (!result || busy !== null) return;
-    if (!result.demo && !consent) { setError("请先确认你有权保存这份内容。"); return; }
     setBusy(index ?? "all"); setError("");
     try {
       const items = index === undefined ? activeItems : [{ ...result.items[index], index }];
@@ -106,7 +103,7 @@ export default function Home() {
         <section className="workspace" id="workspace" aria-label="Instagram 下载工具">
           <div className="tool-top"><div className="tool-tabs" role="tablist" aria-label="媒体类型">{tabs.map(({ id, label, icon: Icon }) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? "tool-tab selected" : "tool-tab"} onClick={() => setTab(id)}><Icon size={17} /><span>{label}</span></button>)}</div><span className="tool-badge"><span />在线工具</span></div>
           <div className="tool-body"><div className="input-heading"><label htmlFor="post-url">粘贴你的 Instagram 链接</label><span>支持帖子、Reels 和图集</span></div>
-            <form onSubmit={event => { event.preventDefault(); void resolve(); }}><div className={`url-input-wrap${error ? " has-error" : ""}`}><Link2 size={22} className="input-icon" /><input ref={inputRef} id="post-url" aria-describedby={error ? "tool-error" : "url-hint"} type="text" inputMode="url" autoComplete="off" spellCheck={false} maxLength={1000} value={url} onChange={event => { setUrl(event.target.value); setError(""); }} placeholder="https://www.instagram.com/p/..." disabled={loading || busy !== null} /><button className="paste-button" type="button" aria-label="粘贴链接" onClick={paste} disabled={loading || busy !== null}><Clipboard size={15} /><span>粘贴</span></button><button className="resolve-button" type="submit" disabled={loading || busy !== null}>{loading ? <><LoaderCircle size={18} className="spin" />解析中</> : <>解析链接<ArrowRight size={18} /></>}</button></div><div className="consent-row"><label className="consent"><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} /><span>我拥有此内容，或已获得下载授权。</span></label><button className="demo-button" type="button" onClick={showDemo} disabled={loading || busy !== null}><Play size={12} fill="currentColor" />体验示例<ArrowRight size={13} /></button></div></form>
+            <form onSubmit={event => { event.preventDefault(); void resolve(); }}><div className={`url-input-wrap${error ? " has-error" : ""}`}><Link2 size={22} className="input-icon" /><input ref={inputRef} id="post-url" aria-describedby={error ? "tool-error" : "url-hint"} type="text" inputMode="url" autoComplete="off" spellCheck={false} maxLength={1000} value={url} onChange={event => { setUrl(event.target.value); setError(""); }} placeholder="https://www.instagram.com/p/..." disabled={loading || busy !== null} /><button className="paste-button" type="button" aria-label="粘贴链接" onClick={paste} disabled={loading || busy !== null}><Clipboard size={15} /><span>粘贴</span></button><button className="resolve-button" type="submit" disabled={loading || busy !== null}>{loading ? <><LoaderCircle size={18} className="spin" />解析中</> : <>解析链接<ArrowRight size={18} /></>}</button></div><div className="input-actions"><button className="demo-button" type="button" onClick={showDemo} disabled={loading || busy !== null}><Play size={12} fill="currentColor" />体验示例<ArrowRight size={13} /></button></div></form>
             <p className="sr-only" id="url-hint">支持 instagram.com 的 p、reel、reels、tv 帖子链接。</p>
             {error && <div className="error-box" id="tool-error" role="alert"><CircleHelp size={18} /><span>{error}</span></div>}
             {loading && <div className="loading-panel" role="status"><span className="loading-art"><Link2 size={25} /><LoaderCircle size={45} className="spin" /></span><strong>正在读取公开内容</strong><p>正在检查链接并寻找可下载的媒体，请稍候…</p><div className="loading-track"><span /></div></div>}
@@ -115,7 +112,7 @@ export default function Home() {
           </div><div className="tool-footer"><span><ShieldCheck size={15} />尊重创作，保存有权使用的内容</span><span><LockKeyhole size={13} />不收集 Instagram 登录信息</span></div>
         </section>
         <section className="feature-row" aria-label="支持的内容"><article><span className="feature-icon peach"><ImageIcon size={22} /></span><div><h3>每一张，都清晰</h3><p>保存公开可用的图片画质</p></div><span className="feature-tag">图片</span></article><article><span className="feature-icon lilac"><Film size={22} /></span><div><h3>让精彩，随时重播</h3><p>视频与 Reels，轻松保存</p></div><span className="feature-tag">视频</span></article><article><span className="feature-icon mint"><Layers3 size={22} /></span><div><h3>一组灵感，一次收藏</h3><p>轮播图集，逐张预览下载</p></div><span className="feature-tag">图集</span></article></section>
-        <section className="how-section" id="how-it-works"><div className="section-intro"><span className="small-label">JUST THREE SIMPLE STEPS</span><h2>保存灵感，只需三步</h2><p>从喜欢，到留存。简单一点。</p></div><div className="steps"><article><span className="step-number">01</span><span className="step-icon"><Link2 size={22} /></span><h3>复制内容链接</h3><p>打开 Instagram，在帖子或 Reels 的<br />分享菜单中选择「复制链接」。</p></article><span className="step-connector"><ArrowRight size={20} /></span><article><span className="step-number">02</span><span className="step-icon"><Clipboard size={22} /></span><h3>粘贴并解析</h3><p>将链接粘贴到上方，确认保存权限，<br />点击「解析链接」。</p></article><span className="step-connector"><ArrowRight size={20} /></span><article><span className="step-number">03</span><span className="step-icon"><ArrowDownToLine size={22} /></span><h3>预览，下载，收藏</h3><p>选择要保存的图片或视频，<br />下载到你的设备。</p></article></div></section>
+        <section className="how-section" id="how-it-works"><div className="section-intro"><span className="small-label">JUST THREE SIMPLE STEPS</span><h2>保存灵感，只需三步</h2><p>从喜欢，到留存。简单一点。</p></div><div className="steps"><article><span className="step-number">01</span><span className="step-icon"><Link2 size={22} /></span><h3>复制内容链接</h3><p>打开 Instagram，在帖子或 Reels 的<br />分享菜单中选择「复制链接」。</p></article><span className="step-connector"><ArrowRight size={20} /></span><article><span className="step-number">02</span><span className="step-icon"><Clipboard size={22} /></span><h3>粘贴并解析</h3><p>将链接粘贴到上方，<br />点击「解析链接」。</p></article><span className="step-connector"><ArrowRight size={20} /></span><article><span className="step-number">03</span><span className="step-icon"><ArrowDownToLine size={22} /></span><h3>预览，下载，收藏</h3><p>选择要保存的图片或视频，<br />下载到你的设备。</p></article></div></section>
         <section className="faq-section" id="faq"><div className="faq-intro"><span className="small-label">GOOD TO KNOW</span><h2>也许你想了解</h2><p>关于下载、隐私和内容使用。</p><span className="faq-doodle" aria-hidden="true"><CircleHelp size={56} strokeWidth={1} /><Sparkles size={24} /></span></div><div className="faq-list">{faqs.map(([question, answer]) => <details key={question}><summary>{question}<ChevronDown size={17} /></summary><p>{answer}</p></details>)}</div></section>
         <aside className="respect-note"><span className="respect-icon"><ShieldCheck size={24} /></span><div><h3>让灵感流动，也让创作被尊重。</h3><p>仅下载你拥有或获授权的内容。公开可见不等于允许转载，请尊重版权与个人隐私。</p></div><span className="respect-mark" aria-hidden="true">With respect, always.</span></aside>
       </main>

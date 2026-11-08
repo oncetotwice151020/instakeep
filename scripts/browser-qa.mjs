@@ -15,9 +15,10 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
   await page.getByRole("button", { name: "解析链接", exact: true }).click();
   await page.getByRole("alert").filter({ hasText: "请先粘贴" }).waitFor();
-  await page.getByLabel("粘贴你的 Instagram 链接", { exact: true }).fill("https://www.instagram.com/p/Abc123_/");
+  await page.getByLabel("粘贴你的 Instagram 链接", { exact: true }).fill("https://example.com/p/Abc123_/");
   await page.getByRole("button", { name: "解析链接", exact: true }).click();
-  await page.getByRole("alert").filter({ hasText: "确认你有权" }).waitFor();
+  await page.getByRole("alert").filter({ hasText: "只支持 instagram.com" }).waitFor();
+  assert.equal(await page.getByRole("checkbox").count(), 0);
   await page.getByRole("button", { name: "体验示例" }).click();
   assert.equal(await page.locator(".media-card").count(), 3);
   const downloadEvent = page.waitForEvent("download");
@@ -37,15 +38,13 @@ try {
   await page.locator(".faq-list summary").first().click();
   assert.equal(await page.locator(".faq-list details").first().getAttribute("open"), "");
 
-  const bad = await context.request.post(`${base}/api/resolve`, { data: { url: "https://127.0.0.1/private", authorized: true } });
+  const bad = await context.request.post(`${base}/api/resolve`, { data: { url: "https://127.0.0.1/private" } });
   assert.equal(bad.status(), 400);
-  const unauthorized = await context.request.post(`${base}/api/resolve`, { data: { url: "https://www.instagram.com/p/Abc123_/" } });
-  assert.equal(unauthorized.status(), 400);
-  const hostile = await context.request.post(`${base}/api/resolve`, { headers: { Origin: "https://evil.example" }, data: { url: "https://www.instagram.com/p/Abc123_/", authorized: true } });
+  const hostile = await context.request.post(`${base}/api/resolve`, { headers: { Origin: "https://evil.example" }, data: { url: "https://www.instagram.com/p/Abc123_/" } });
   assert.equal(hostile.status(), 403);
   const badMedia = await context.request.get(`${base}/api/media?post=https://127.0.0.1/private&index=0`);
   assert.equal(badMedia.status(), 400);
-  const live = await context.request.post(`${base}/api/resolve`, { data: { url: "https://www.instagram.com/reel/Chunk8-jurw/", authorized: true }, timeout: 45000 });
+  const live = await context.request.post(`${base}/api/resolve`, { data: { url: "https://www.instagram.com/reel/Chunk8-jurw/" }, timeout: 45000 });
   const liveResult = { status: live.status(), body: await live.json() };
   if (live.ok()) {
     const mediaPath = `${base}/api/media?post=${encodeURIComponent(liveResult.body.url)}&index=0`;
@@ -67,6 +66,6 @@ try {
   assert.equal(await mobile.locator(".media-card").count(), 3);
   assert.equal(await mobile.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
   assert.deepEqual(errors, []);
-  await fs.writeFile("outputs/qa-results/report.json", JSON.stringify({ checks: ["desktop layout", "mobile layout", "empty input", "consent", "demo previews", "actual demo file download", "type filtering", "history modal", "FAQ", "invalid-host rejection", "authorization rejection", "cross-origin rejection", "media proxy rejection", "no page errors"], liveInstagram: liveResult }, null, 2));
+  await fs.writeFile("outputs/qa-results/report.json", JSON.stringify({ checks: ["desktop layout", "mobile layout", "empty input", "demo previews", "actual demo file download", "type filtering", "history modal", "FAQ", "invalid-host rejection", "cross-origin rejection", "media proxy rejection", "no page errors"], liveInstagram: liveResult }, null, 2));
   console.log("Browser QA passed: desktop, mobile, preview, download, filters, history, FAQ and API checks.");
 } finally { await browser.close(); }

@@ -23,14 +23,14 @@ npm start
 ## 使用
 
 1. 从 Instagram 复制自己拥有或已获授权的公开帖子链接。
-2. 粘贴链接，勾选下载权限确认，点击「解析链接」。
+2. 粘贴链接，点击「解析链接」。
 3. 预览媒体，下载单个文件或当前筛选结果中的全部文件。多个文件逐个保存，浏览器可能需要允许多文件下载。
 
 「体验示例」使用本站原创 SVG 插画，明确标为示例，不会伪装成真实解析结果。最近 12 条成功解析记录仅写入浏览器 localStorage，可清除。
 
 ## 工作方式与限制
 
-- `POST /api/resolve` 接收 `{ "url": "https://www.instagram.com/p/SHORTCODE/", "authorized": true }`，读取公开网页内已有的媒体数据，并返回类型、尺寸、作者与文字信息。
+- `POST /api/resolve` 接收 `{ "url": "https://www.instagram.com/p/SHORTCODE/" }`，读取公开网页内已有的媒体数据，并返回类型、尺寸、作者与文字信息。
 - `GET /api/media?post=ENCODED_POST_URL&index=0` 从同一帖子解析得到的 CDN 地址流式转发文件；添加 `preview=1` 返回图片或视频封面。支持视频 Range 请求。
 - 不要求或接收 Instagram 账号密码、登录 Cookie、私密账号凭证；不绕过登录页、访问挑战或私密内容限制，也不调用隐藏的 GraphQL 接口。
 - Instagram 可能改变页面结构、要求登录、限流或拒绝云服务器访问。因此不能保证每条公开链接都可解析。服务器也必须能连接 Instagram 及其 CDN。失败会返回明确错误。
@@ -57,7 +57,7 @@ npm install --prefix outputs/qa --no-save --no-audit --no-fund playwright-core
 node scripts/browser-qa.mjs
 ```
 
-脚本验证桌面/390 px 手机布局、输入错误、授权提示、示例文件真实下载、媒体筛选、记录弹窗、FAQ、接口边界，以及真实公开 Reels 的解析与 1024 字节 Range 传输。第三方媒体测试受上游状态影响。截图及报告在被忽略的 `outputs/qa-results/` 目录。
+脚本验证桌面/390 px 手机布局、输入错误、示例文件真实下载、媒体筛选、记录弹窗、FAQ、接口边界，以及真实公开 Reels 的解析与 1024 字节 Range 传输。第三方媒体测试受上游状态影响。截图及报告在被忽略的 `outputs/qa-results/` 目录。
 
 ## 主要文件
 
